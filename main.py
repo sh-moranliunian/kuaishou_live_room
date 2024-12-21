@@ -11,7 +11,48 @@ from urllib.parse import urlunparse
 import requests
 from bs4 import BeautifulSoup
 
-from CookieUtil import CookieUtil
+
+from http.cookies import SimpleCookie
+
+
+class CookieUtil:
+    @staticmethod
+    def cookies_to_dict(cookies):
+        """
+        Convert requests.cookies.RequestsCookieJar to dictionary
+        """
+        cookie_dict = {}
+        for key, value in cookies.items():
+            cookie_dict[key] = value
+        return cookie_dict
+
+    @staticmethod
+    def cookies_to_string(cookie_dict):
+        """
+        Convert cookie dictionary to string
+        """
+        return '; '.join([f'{key}={value}' for key, value in cookie_dict.items()])
+
+    @staticmethod
+    def parse_cookie_string(cookie_str):
+        """
+        Parse cookie string into dictionary
+        """
+        cookie = SimpleCookie()
+        cookie.load(cookie_str)
+        cookies = {}
+        for key, morsel in cookie.items():
+            cookies[key] = morsel.value
+        return cookies
+
+    @staticmethod
+    def merge_cookies(cookies1, cookies2):
+        """
+        Merge two cookie dictionaries
+        """
+        merged = cookies1.copy()
+        merged.update(cookies2)
+        return merged
 
 
 class LivingStatus(Enum):
@@ -86,8 +127,11 @@ def get_stream_url(user_agent, pc_live_url):
                             if live_stream is not None and "playUrls" in live_stream:
                                 play_urls = live_stream['playUrls']
                                 if play_urls is not None:
-                                    for play_url in play_urls:
-                                        result.extend(play_url['adaptationSet']['representation'])
+                                    for type_, play_url in play_urls.items():
+                                        try:
+                                            result.extend(play_url['adaptationSet']['representation'])
+                                        except KeyError:
+                                            continue
                                     filtered_list = [{'name': item['shortName'], 'url': item['url']} for item in result]
                                     return filtered_list, LivingStatus.Living.value
                                 else:
@@ -162,7 +206,7 @@ if __name__ == '__main__':
     # url = "https://live.kuaishou.com/u/3xj6wf7ksgs2uru"
     # url = "https://live.kuaishou.com/u/DD5221273500"
     # url = "https://live.kuaishou.com/u/haiwangqi"
-    url = "https://v.kuaishou.com/h2dbu"
+    url = "https://live.kuaishou.com/u/hy441195"
     parsed_url = urlparse(url)
     # 移除查询参数
     url_without_query = urlunparse(parsed_url._replace(query=""))
